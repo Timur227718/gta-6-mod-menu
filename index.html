@@ -1,0 +1,225 @@
+<!DOCTYPEhtml>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Mobile Mod Menu Prototype</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #111;
+            font-family: sans-serif;
+            user-select: none;
+        }
+        canvas {
+            display: block;
+        }
+        /* Кнопка открытия Мод-Меню */
+        #menu-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #ffcc00;
+            color: #000;
+            border: none;
+            padding: 12px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            z-index: 10;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        /* Окно Мод-Меню */
+        #mod-menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            background: rgba(20, 20, 20, 0.95);
+            border: 2px solid #ffcc00;
+            border-radius: 12px;
+            padding: 20px;
+            color: #fff;
+            display: none;
+            z-index: 20;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+        #mod-menu h2 {
+            margin-top: 0;
+            color: #ffcc00;
+            font-size: 20px;
+            text-align: center;
+        }
+        .mod-item {
+            margin: 15px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .mod-item input[type="range"] {
+            width: 100%;
+        }
+        /* Экранные кнопки управления для планшета */
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            gap: 15px;
+            z-index: 5;
+        }
+        .ctrl-btn {
+            width: 70px;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid #fff;
+            color: #fff;
+            font-size: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: cent er;
+            justify-content: center;
+            outline: none;
+            cursor: pointer;
+        }
+        .ctrl-btn:active {
+            background: rgba(255, 204, 0, 0.6);
+        }
+    </style>
+</head>
+<body>
+
+    <button id="menu-btn">⚙ ЧИТЫ</button>
+
+    <!-- Само Мод-Меню -->
+    <div id="mod-menu">
+        <h2>MOD MENU v1.0</h2>
+        <div class="mod-item">
+            <label>Бессмертие (God Mode)</label>
+            <input type="checkbox" id="godMode">
+        </div>
+        <div class="mod-item">
+            <label>Бесконечные деньги</label>
+            <input type="checkbox" id="infiniteMoney">
+        </div>
+        <div class="mod-item" style="flex-direction: column; align-items: flex-start;">
+            <label>Скорость машины: <span id="speedVal">1.0</span>x</label>
+            <input type="range" id="speedSlider" min="0.5" max="3.0" step="0.1" value="1.0">
+        </div>
+    </div>
+
+    <!-- Кнопки движения для планшета -->
+    <div class="controls">
+        <button class="ctrl-btn" id="btn-left">◀</button>
+        <button class="ctrl-btn" id="btn-right">▶</button>
+        <button class="ctrl-btn" id="btn-up">▲</button>
+        <button class="ctrl-btn" id="btn-down">▼</button>
+    </div>
+
+    <!-- Подключаем библиотеку Three.js для 3D графики прямо в браузере -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Логика Мод-Меню
+        const menuBtn = document.getElementById('menu-btn');
+        const modMenu = document.getElementById('mod-menu');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedVal = document.getElementById('speedVal');
+
+        let modSettings = {
+            godMode: false,
+            infiniteMoney: false,
+            speedMultiplier: 1.0
+        };
+
+        menuBtn.addEventListener('click', () => {
+            modMenu.style.display = modMenu.style.display === 'block' ? 'none' : 'block';
+        });
+
+        document.getElementById('godMode').addEventListener('change', (e) => { modSettings.godMode = e.target.checked; });
+        document.getElementById('infiniteMoney').addEventListener('change', (e) => { modSettings.infiniteMoney = e.target.checked; });
+        speedSlider.addEventListener('input', (e) => {
+            modSettings.speedMultiplier = parseFloat(e.target.value);
+            speedVal.innerText = modSettings.speedMultiplier;
+        });
+
+        // 3D Сцена (Three.js)
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Свет
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(5, 10, 7);
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0x404040));
+
+        // Дорога
+        const roadGeo = new THREE.PlaneGeometry(20, 200);
+        const roadMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+        const road = new THREE.Mesh(roadGeo, roadMat);
+        road.rotation.x = -Math.PI / 2;
+        scene.add(road);
+
+        // Машина (простой куб-заглушка)
+        const carGeo = new THREE.BoxGeometry(1.5, 0.8, 3);
+        const carMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+        const car = new THREE.Mesh(carGeo, carMat);
+        car.position.y = 0.4;
+        scene.add(car);
+
+        camera.position.set(0, 5, -6);
+        camera.lookAt(car.position);
+
+        // Управление с экрана
+        let keys = { forward: false, backward: false, left: false, right: false };
+
+        document.getElementById('btn-up').addEventListener('touchstart', () => keys.forward = true);
+        document.getElementById('btn-up').addEventListener('touchend', () => keys.forward = false);
+        document.getElementById('btn-down').addEventListener('touchstart', () => keys.backward = true);
+        document.getElementById('btn-down').addEventListener('touchend', () => keys.backward = false);
+        document.getElementById('btn-left').addEventListener('touchstart', () => keys.left = true);
+        document.getElementById('btn-left').addEventListener('touchend', () => keys.left = false);
+        document.getElementById('btn-right').addEventListener('touchstart', () => keys.right = true);
+        document.getElementById('btn-right').addEventListener('touchend', () => keys.right = false);
+
+        // Анимация и физика
+        let carSpeed = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+
+            let baseSpeed = 0.1;
+            let currentSpeed = baseSpeed * modSettings.speedMultiplier;
+
+            if (keys.forward) carSpeed = currentSpeed;
+            else if (keys.backward) carSpeed = -currentSpeed;
+            else carSpeed *= 0.95; // торможение
+
+            if (keys.left) car.rotation.y += 0.03;
+            if (keys.right) car.rotation.y -= 0.03;
+
+            car.translateZ(carSpeed);
+
+            // Камера следует за машиной
+            camera.position.x = car.position.x - Math.sin(car.rotation.y) * 5;
+            camera.position.z = car.position.z - Math.cos(car.rotation.y) * 5;
+            camera.position.y = car.position.y + 3;
+            camera.lookAt(car.position);
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
